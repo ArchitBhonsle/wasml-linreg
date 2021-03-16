@@ -4,5 +4,10 @@ export const file = async () => {
   const [fileHandle] = await window.showOpenFilePicker();
   const file = await fileHandle.getFile();
 
-  new linreg.Table(file);
+  try {
+    const table = await linreg.newTable(file);
+    console.log(table.headers);
+  } catch (err) {
+    console.error(err);
+  }
 };
