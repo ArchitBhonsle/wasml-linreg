@@ -1,3 +1,4 @@
+mod table;
 mod utils;
 
 use wasm_bindgen::prelude::*;
@@ -14,10 +15,4 @@ extern "C" {
 #[wasm_bindgen(start)]
 pub fn start() {
     utils::set_panic_hook();
-}
-
-#[wasm_bindgen]
-pub fn greet() {
-    alert("Hello! Check the console!");
-    utils::log(&format!("Magic"))
 }
