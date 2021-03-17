@@ -45,6 +45,23 @@ impl Table {
 
         data
     }
+
+    pub fn pop(&mut self, header: String) -> Option<Table> {
+        let removed = self.data.remove_entry(&header);
+
+        match removed {
+            Some((header, column)) => {
+                let headers = vec![header.clone()];
+                let mut data = HashMap::new();
+                data.insert(header.clone(), column);
+
+                self.headers.retain(|x| *x != header);
+
+                Some(Table { data, headers })
+            }
+            None => None,
+        }
+    }
 }
 
 #[wasm_bindgen(js_name = tableFromCSV)]

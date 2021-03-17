@@ -6,8 +6,10 @@ export const file = async () => {
 
   try {
     const table = await linreg.tableFromCSV(file);
-    console.log(table.headers);
-    console.log(table.data);
+    console.log('Table before pop', table.headers);
+    const sex = table.pop('sex');
+    console.log('Popped table', sex.data);
+    console.log('Table after pop', table.headers);
   } catch (err) {
     console.error(err);
   }
