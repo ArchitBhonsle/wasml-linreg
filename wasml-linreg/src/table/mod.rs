@@ -20,16 +20,35 @@ impl Table {
     pub fn headers(&self) -> js_sys::Array {
         let headers = js_sys::Array::new_with_length(self.headers.len() as u32);
 
-        for (idx, header) in self.headers.iter().enumerate() {
-            headers.set(idx as u32, JsValue::from_str(header))
-        }
+        self.headers
+            .iter()
+            .enumerate()
+            .for_each(|(idx, header)| headers.set(idx as u32, JsValue::from_str(header)));
 
         headers
     }
+
+    #[wasm_bindgen(getter)]
+    pub fn data(&self) -> js_sys::Map {
+        let data = js_sys::Map::new();
+
+        self.headers.iter().for_each(|header| {
+            let column = self.data.get(header).unwrap_throw();
+            let column_array = js_sys::Array::new_with_length(column.len() as u32);
+
+            column.iter().enumerate().for_each(|(idx, cell)| {
+                column_array.set(idx as u32, cell.value());
+            });
+
+            data.set(&JsValue::from_str(header), &column_array);
+        });
+
+        data
+    }
 }
 
-#[wasm_bindgen(js_name = newTable)]
-pub async fn new_table(file: web_sys::File) -> Result<Table, JsValue> {
+#[wasm_bindgen(js_name = tableFromCSV)]
+pub async fn table_from_csv(file: web_sys::File) -> Result<Table, JsValue> {
     let text_jsvalue = wasm_bindgen_futures::JsFuture::from(file.text())
         .await
         .unwrap_throw();
@@ -49,7 +68,7 @@ pub async fn new_table(file: web_sys::File) -> Result<Table, JsValue> {
 
     for row_result in reader.records() {
         let row = row_result.unwrap_throw();
-        for (idx, cell) in row.iter().enumerate() {
+        row.iter().enumerate().for_each(|(idx, cell)| {
             let value = Cell::new(cell);
             let header = &headers[idx];
             if data.contains_key(header) {
@@ -57,7 +76,7 @@ pub async fn new_table(file: web_sys::File) -> Result<Table, JsValue> {
             } else {
                 data.insert(header.to_string(), vec![value]);
             }
-        }
+        });
     }
 
     Ok(Table { data, headers })
