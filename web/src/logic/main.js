@@ -5,8 +5,9 @@ export const file = async () => {
   const file = await fileHandle.getFile();
 
   try {
-    const table = await linreg.newTable(file);
+    const table = await linreg.tableFromCSV(file);
     console.log(table.headers);
+    console.log(table.data);
   } catch (err) {
     console.error(err);
   }
