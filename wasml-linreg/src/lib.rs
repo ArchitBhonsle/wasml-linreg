@@ -1,4 +1,5 @@
 mod table;
+mod warray;
 mod utils;
 
 use wasm_bindgen::prelude::*;
