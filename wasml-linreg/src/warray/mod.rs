@@ -8,7 +8,7 @@ pub enum WarrayType {
 
 pub trait Warrable {
     fn to_js(&self) -> js_sys::Array;
-    fn get_type(&self) -> WarrayType;
+    fn datatype(&self) -> WarrayType;
 }
 
 impl Warrable for Vec<bool> {
@@ -22,7 +22,7 @@ impl Warrable for Vec<bool> {
         js_array
     }
 
-    fn get_type(&self) -> WarrayType {
+    fn datatype(&self) -> WarrayType {
         WarrayType::Boolean
     }
 }
@@ -38,7 +38,7 @@ impl Warrable for Vec<f64> {
         js_array
     }
     
-    fn get_type(&self) -> WarrayType {
+    fn datatype(&self) -> WarrayType {
         WarrayType::Number
     }
 }
@@ -54,7 +54,7 @@ impl Warrable for Vec<String> {
         js_array
     }
     
-    fn get_type(&self) -> WarrayType {
+    fn datatype(&self) -> WarrayType {
         WarrayType::String
     }
 }
@@ -69,6 +69,7 @@ pub struct Warray {
 impl Warray {
     #[wasm_bindgen(constructor)]
     pub fn new(js_array: js_sys::Array, type_code: &str) -> Result<Warray, JsValue> {
+        
         match type_code {
             "b" | "bool" | "boolean" => Ok(Warray {
                 warray: Box::new(
@@ -90,5 +91,19 @@ impl Warray {
             }),
             _ => Err(JsValue::from_str("invalid type"))
         }
+    }
+
+    #[wasm_bindgen(getter)]
+    pub fn datatype(&self) -> String {
+        match self.warray.datatype() {
+            WarrayType::Boolean => "boolean".to_string(),
+            WarrayType::Number => "number".to_string(),
+            WarrayType::String => "string".to_string()
+        }
+    }
+    
+    #[wasm_bindgen(getter, js_name = data)]
+    pub fn to_js(&self) -> js_sys::Array {
+        self.warray.to_js()
     }
 }
