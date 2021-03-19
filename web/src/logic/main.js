@@ -15,11 +15,12 @@ export const file = async () => {
   }
 
   try {
-    const wnum = new linreg.Warray([10, 1.0, 300, -1], 'num');
-    console.log(wnum.data, wnum.datatype);
-    const numcol = new linreg.Column('hello', wnum);
-    console.log(numcol.header, numcol.warray);
-    console.log(numcol.data);
+    const wnum = new linreg.Warray([10, 1.0, 300, -1], 'b');
+    console.log(wnum.to_js());
+    const wstr = new linreg.Warray(['~', 'hello', 'world'], 'string');
+    console.log(wstr.to_js());
+    const wboo = new linreg.Warray([false, true, false], 'b');
+    console.log(wboo.to_js());
   } catch (err) {
     console.error(err);
   }
