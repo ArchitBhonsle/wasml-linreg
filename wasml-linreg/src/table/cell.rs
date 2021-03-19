@@ -4,7 +4,6 @@ use wasm_bindgen::prelude::*;
 pub enum Cell {
     String(String),
     Number(f64),
-    Boolean(bool),
 }
 
 impl Cell {
@@ -12,17 +11,32 @@ impl Cell {
         if let Ok(parsed) = cell.parse::<f64>() {
             return Cell::Number(parsed);
         }
-        if let Ok(parsed) = cell.parse::<bool>() {
-            return Cell::Boolean(parsed);
-        }
         return Cell::String(cell.to_string());
     }
 
-    pub fn value(&self) -> JsValue {
+    pub fn is_number(&self) -> bool {
+        match self {
+            Cell::Number(_) => true,
+            Cell::String(_) => false,
+        }
+    }
+
+    pub fn to_js(&self) -> JsValue {
         match self {
             Cell::String(x) => JsValue::from_str(x),
-            Cell::Number(x) => JsValue::from_f64(x.clone()),
-            Cell::Boolean(x) => JsValue::from_bool(x.clone()),
+            Cell::Number(x) => JsValue::from_f64(*x),
         }
+    }
+    
+    pub fn from_js(value: JsValue) -> Result<Cell, JsValue> {
+        if let Some(val) = value.as_string() {
+            return Ok(Cell::String(val));
+        }
+        
+        if let Some(val) = value.as_f64() {
+            return Ok(Cell::Number(val));
+        }
+
+        return Err(JsValue::from_str("Unsupported datatype"))
     }
 }

@@ -35,7 +35,7 @@ impl Table {
             let column_array = js_sys::Array::new_with_length(column.len() as u32);
 
             column.iter().enumerate().for_each(|(idx, cell)| {
-                column_array.set(idx as u32, cell.value());
+                column_array.set(idx as u32, cell.to_js());
             });
 
             data.set(&JsValue::from_str(header), &column_array);
@@ -62,7 +62,7 @@ impl Table {
     }
 }
 
-#[wasm_bindgen(js_name = tableFromCSV)]
+#[wasm_bindgen(js_name = readCSV)]
 pub async fn table_from_csv(file: web_sys::File) -> Result<Table, JsValue> {
     let text_jsvalue = wasm_bindgen_futures::JsFuture::from(file.text())
         .await

@@ -1,3 +1,3 @@
 pub mod cell;
-pub mod table;
 pub mod column;
+pub mod table;

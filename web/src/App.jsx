@@ -1,8 +1,11 @@
-import { file } from './logic/main';
+import { file, run } from './logic/main';
 
 import './App.css';
+import { useEffect } from 'react';
 
 function App() {
+  useEffect(() => run(), []);
+
   return (
     <div className='app'>
       <h1>WASML - LinReg</h1>
