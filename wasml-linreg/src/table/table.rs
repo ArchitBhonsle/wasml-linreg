@@ -1,12 +1,12 @@
 use std::collections::HashMap;
 use wasm_bindgen::prelude::*;
 
-use super::cell::Cell;
+use super::column::*;
 
 #[wasm_bindgen]
 pub struct Table {
     #[wasm_bindgen(skip)]
-    pub data: HashMap<String, Vec<Cell>>,
+    pub data: HashMap<String, Column>,
 
     #[wasm_bindgen(skip)]
     pub headers: Vec<String>,
@@ -32,11 +32,7 @@ impl Table {
 
         self.headers.iter().for_each(|header| {
             let column = self.data.get(header).unwrap_throw();
-            let column_array = js_sys::Array::new_with_length(column.len() as u32);
-
-            column.iter().enumerate().for_each(|(idx, cell)| {
-                column_array.set(idx as u32, cell.to_js());
-            });
+            let column_array = column.data_to_js();
 
             data.set(&JsValue::from_str(header), &column_array);
         });
@@ -79,20 +75,26 @@ pub async fn table_from_csv(file: web_sys::File) -> Result<Table, JsValue> {
         .map(|x| x.to_string())
         .collect();
 
-    let mut data: HashMap<String, Vec<Cell>> = HashMap::new();
-
-    for row_result in reader.records() {
+    let mut data_as_strings: HashMap<String, Vec<String>> = HashMap::new();
+    reader.records().for_each(|row_result| {
         let row = row_result.unwrap_throw();
-        row.iter().enumerate().for_each(|(idx, cell)| {
-            let value = Cell::new(cell);
+        
+        row.iter().enumerate().for_each(|(idx, cell_str)| {
             let header = &headers[idx];
-            if data.contains_key(header) {
-                data.get_mut(header).unwrap_throw().push(value);
+            let cell = cell_str.clone();
+            if data_as_strings.contains_key(header) {
+                data_as_strings.get_mut(header).unwrap_throw().push(cell.to_string());
             } else {
-                data.insert(header.to_string(), vec![value]);
+                data_as_strings.insert(header.to_string(), vec![cell.to_string()]);
             }
         });
-    }
+    });
+    
+    let mut data: HashMap<String, Column> = HashMap::new();
+    data_as_strings.iter().for_each(|(header, data_vec)| {
+        let column = Column::new(header.clone(), data_vec.clone()).unwrap_throw();
+        data.insert(header.clone(), column);
+    });
 
     Ok(Table { data, headers })
 }

@@ -11,11 +11,11 @@ pub struct Column {
 }
 
 impl Column {
-    pub fn new(header: String, data_as_string: Vec<&str>) -> Result<Column, JsValue> {
+    pub fn new(header: String, data_as_string: Vec<String>) -> Result<Column, JsValue> {
         let data = data_as_string
             .iter()
             .map(|x| {
-                Cell::new(*x)
+                Cell::new(x)
             })
             .collect();
         
