@@ -24,6 +24,22 @@ impl Column {
             data,    
         })
     }
+
+    pub fn min(&self) -> Cell {
+        self.data
+            .iter()
+            .min_by(|a, b| a.partial_cmp(b).unwrap_throw())
+            .unwrap_throw()
+            .clone() 
+    }
+
+    pub fn max(&self) -> Cell {
+        self.data
+            .iter()
+            .max_by(|a, b| a.partial_cmp(b).unwrap_throw())
+            .unwrap_throw()
+            .clone() 
+    }
 }
 
 #[wasm_bindgen]
@@ -59,4 +75,16 @@ impl Column {
     pub fn header(&self) -> String {
         self.header.clone()
     }
+    
+    #[wasm_bindgen(js_name = isNumber)]
+    pub fn is_number(&self) -> bool {
+        self.data.iter().all(|e| e.is_number())
+    }
+    
+    #[wasm_bindgen(js_name = isUniform)]
+    pub fn is_uniform(&self) -> bool {
+        self.data.iter().all(|e| e.is_number())
+        || self.data.iter().all(|e| !e.is_number())
+    }
+    
 }

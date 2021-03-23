@@ -1,6 +1,6 @@
 use wasm_bindgen::prelude::*;
 
-#[derive(Debug)]
+#[derive(PartialEq, PartialOrd, Clone)]
 pub enum Cell {
     String(String),
     Number(f64),
@@ -12,6 +12,14 @@ impl Cell {
             return Cell::Number(parsed);
         }
         return Cell::String(cell.to_string());
+    }
+   
+    pub fn new_from_string(cell: String) -> Cell {
+        return Cell::String(cell);
+    }
+    
+    pub fn new_from_number(cell: f64) -> Cell {
+        return Cell::Number(cell);
     }
 
     pub fn is_number(&self) -> bool {

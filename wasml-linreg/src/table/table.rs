@@ -1,7 +1,9 @@
 use std::collections::HashMap;
 use wasm_bindgen::prelude::*;
 
+use super::cell::*;
 use super::column::*;
+use super::transform::*;
 
 #[wasm_bindgen]
 pub struct Table {
@@ -14,8 +16,8 @@ pub struct Table {
 
 #[wasm_bindgen]
 impl Table {
-    #[wasm_bindgen(getter)]
-    pub fn headers(&self) -> js_sys::Array {
+    #[wasm_bindgen(getter, js_name = headers)]
+    pub fn headers_to_js(&self) -> js_sys::Array {
         let headers = js_sys::Array::new_with_length(self.headers.len() as u32);
 
         self.headers
@@ -26,8 +28,8 @@ impl Table {
         headers
     }
 
-    #[wasm_bindgen(getter)]
-    pub fn data(&self) -> js_sys::Map {
+    #[wasm_bindgen(getter, js_name = data)]
+    pub fn to_js(&self) -> js_sys::Map {
         let data = js_sys::Map::new();
 
         self.headers.iter().for_each(|header| {
@@ -40,21 +42,92 @@ impl Table {
         data
     }
 
-    pub fn pop(&mut self, header: String) -> Option<Table> {
+    pub fn pop(&mut self, header: String) -> Option<Column> {
         let removed = self.data.remove_entry(&header);
 
         match removed {
             Some((header, column)) => {
-                let headers = vec![header.clone()];
-                let mut data = HashMap::new();
-                data.insert(header.clone(), column);
-
                 self.headers.retain(|x| *x != header);
-
-                Some(Table { data, headers })
+                Some(column)
             }
             None => None,
         }
+    }
+    
+    #[wasm_bindgen(js_name = pushColumn)]
+    pub fn push_column(&mut self, column: Column) -> Result<(), JsValue> {
+        if self.headers.contains(&column.header) {
+            return Err(JsValue::from_str("header already exists"));
+        }
+        
+        self.headers.push(column.header.clone());
+        self.data.insert(column.header.clone(), column);        
+        
+        Ok(())
+    }
+
+    #[wasm_bindgen(js_name = isNumber)]
+    pub fn is_number(&self) -> bool {
+        self.data.values().into_iter().all(|e| e.is_number())
+    }
+
+    #[wasm_bindgen(js_name = isUniform)]
+    pub fn is_uniform(&self) -> bool {
+        self.data.values().into_iter().all(|e| e.is_uniform())
+    }
+
+    #[wasm_bindgen(js_name = applyTransform)]
+    pub fn apply_transform(&self, trans: &Transform) -> Result<Table, JsValue> {
+        if !self.is_uniform() {
+            return Err(JsValue::from_str("Table has to be uniform"));
+        }
+
+        let mut headers: Vec<String> = Vec::new();
+        let mut data: HashMap<String, Column> = HashMap::new();
+        self.data.iter().for_each(|(header, column)| {
+            if column.is_number() {
+                let normalizer = trans.normalize.get(header).unwrap_throw().clone();
+                let normalized_data: Vec<Cell> = column.data
+                    .iter()
+                    .map(|c| {
+                        if let Cell::Number(v) = c {
+                            return Cell::new_from_number(normalizer(*v));
+                        } else {
+                            return Cell::new_from_number(0.0);
+                        }
+                    })
+                    .collect();
+                
+                headers.push(header.clone());
+                data.insert(header.clone(), Column {
+                    header: header.clone(),
+                    data: normalized_data,
+                });
+            } else {
+                let encoder = trans.encoding.get(header).unwrap_throw();
+                let encoded_data: Vec<Cell> = column.data
+                    .iter()
+                    .map(|c| {
+                        if let Cell::String(v) = c {
+                            return Cell::new_from_number(encoder(v.clone()));
+                        } else {
+                            return Cell::new_from_number(0.0);
+                        }
+                    })
+                    .collect();
+                
+                headers.push(header.clone());
+                data.insert(header.clone(), Column {
+                    header: header.clone(),
+                    data: encoded_data,
+                });
+            }
+        });
+
+        Ok(Table {
+            headers,
+            data,
+        })
     }
 }
 
