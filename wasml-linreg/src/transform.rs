@@ -1,8 +1,8 @@
 use wasm_bindgen::prelude::*;
 use std::collections::HashMap;
 
-use super::table::*;
-use super::cell::*;
+use crate::table::table::*;
+use crate::table::cell::*;
 
 #[wasm_bindgen]
 pub struct Transform {

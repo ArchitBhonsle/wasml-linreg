@@ -6,10 +6,12 @@ export const file = async () => {
 
   try {
     const table = await linreg.readCSV(file);
-    console.log(table.data);
     const transform = new linreg.Transform(table);
     const tTable = table.applyTransform(transform);
     console.log(tTable.data);
+    const matrix = new linreg.Watrix(tTable);
+    console.log(matrix.data);
+    console.log(matrix.height, matrix.width);
   } catch (err) {
     console.error(err);
   }

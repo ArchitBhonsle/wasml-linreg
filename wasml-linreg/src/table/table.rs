@@ -3,7 +3,7 @@ use wasm_bindgen::prelude::*;
 
 use super::cell::*;
 use super::column::*;
-use super::transform::*;
+use crate::transform::*;
 
 #[wasm_bindgen]
 pub struct Table {
@@ -12,6 +12,57 @@ pub struct Table {
 
     #[wasm_bindgen(skip)]
     pub headers: Vec<String>,
+}
+
+impl Table {
+    pub fn to_vec(&self) -> Result<Vec<Vec<f64>>, &str> {
+        if !self.is_uniform() {
+            return Err("Table is not uniform");
+        }
+        if !self.is_number() {
+            return Err("Table is not composed of numbers");
+        }
+
+        Ok(self
+            .data
+            .values()
+            .map(|col| {
+                col.data
+                    .iter()
+                    .map(|c| {
+                        if let Cell::Number(n) = c {
+                            return *n;
+                        } else {
+                            return 0.0;
+                        }
+                    })
+                    .collect()
+            })
+            .collect())
+    }
+    
+    pub fn index(&self, i: usize, j: usize) -> Result<f64, &str> {
+        let col = self.data.get(&self.headers[j]);
+
+        match col {
+            Some(col) => {
+                match &col.data[i] {
+                    Cell::Number(x) => Ok(*x),
+                    Cell::String(_) => Err("Table has a string")
+                }
+            },
+            None => Err("Index out of bounds")
+        }
+    }
+
+    pub fn dims(&self) -> Result<(usize, usize), String> {
+        let height = self.height()
+            .or_else(|e| Err(e.as_string().unwrap()));
+        let width = self.width()
+            .or_else(|e| Err(e.as_string().unwrap()));
+
+        Ok((height?, width?))
+    }   
 }
 
 #[wasm_bindgen]
@@ -53,16 +104,16 @@ impl Table {
             None => None,
         }
     }
-    
+
     #[wasm_bindgen(js_name = pushColumn)]
     pub fn push_column(&mut self, column: Column) -> Result<(), JsValue> {
         if self.headers.contains(&column.header) {
             return Err(JsValue::from_str("header already exists"));
         }
-        
+
         self.headers.push(column.header.clone());
-        self.data.insert(column.header.clone(), column);        
-        
+        self.data.insert(column.header.clone(), column);
+
         Ok(())
     }
 
@@ -73,7 +124,14 @@ impl Table {
 
     #[wasm_bindgen(js_name = isUniform)]
     pub fn is_uniform(&self) -> bool {
-        self.data.values().into_iter().all(|e| e.is_uniform())
+        self.data
+            .values()
+            .into_iter()
+            .map(|c| c.data.len())
+            .collect::<Vec<usize>>()
+            .windows(2)
+            .all(|w| w[0] == w[1])
+            && self.data.values().into_iter().all(|e| e.is_uniform())
     }
 
     #[wasm_bindgen(js_name = applyTransform)]
@@ -87,7 +145,8 @@ impl Table {
         self.data.iter().for_each(|(header, column)| {
             if column.is_number() {
                 let normalizer = trans.normalize.get(header).unwrap_throw().clone();
-                let normalized_data: Vec<Cell> = column.data
+                let normalized_data: Vec<Cell> = column
+                    .data
                     .iter()
                     .map(|c| {
                         if let Cell::Number(v) = c {
@@ -97,15 +156,19 @@ impl Table {
                         }
                     })
                     .collect();
-                
+
                 headers.push(header.clone());
-                data.insert(header.clone(), Column {
-                    header: header.clone(),
-                    data: normalized_data,
-                });
+                data.insert(
+                    header.clone(),
+                    Column {
+                        header: header.clone(),
+                        data: normalized_data,
+                    },
+                );
             } else {
                 let encoder = trans.encoding.get(header).unwrap_throw();
-                let encoded_data: Vec<Cell> = column.data
+                let encoded_data: Vec<Cell> = column
+                    .data
                     .iter()
                     .map(|c| {
                         if let Cell::String(v) = c {
@@ -115,24 +178,45 @@ impl Table {
                         }
                     })
                     .collect();
-                
+
                 headers.push(header.clone());
-                data.insert(header.clone(), Column {
-                    header: header.clone(),
-                    data: encoded_data,
-                });
+                data.insert(
+                    header.clone(),
+                    Column {
+                        header: header.clone(),
+                        data: encoded_data,
+                    },
+                );
             }
         });
 
-        Ok(Table {
-            headers,
-            data,
-        })
+        Ok(Table { headers, data })
     }
+    
+    #[wasm_bindgen(getter)]
+    pub fn height(&self) -> Result<usize, JsValue> {
+        if !self.is_uniform() || self.headers.is_empty() {
+            return Err(JsValue::from_str("The table isn't uniform or has uneven dimensions"));
+        }
+        
+        let col = self.data.get(&self.headers[0]).unwrap();
+        
+        Ok(col.data.len())
+    }
+
+    #[wasm_bindgen(getter)]
+    pub fn width(&self) -> Result<usize, JsValue> {
+        if !self.is_uniform() || self.headers.is_empty() {
+            return Err(JsValue::from_str("The table isn't uniform or has uneven dimensions"));
+        }
+        
+        Ok(self.headers.len())
+    }
+    
 }
 
 #[wasm_bindgen(js_name = readCSV)]
-pub async fn table_from_csv(file: web_sys::File) -> Result<Table, JsValue> {
+pub async fn _table_from_csv(file: web_sys::File) -> Result<Table, JsValue> {
     let text_jsvalue = wasm_bindgen_futures::JsFuture::from(file.text())
         .await
         .unwrap_throw();
@@ -151,18 +235,21 @@ pub async fn table_from_csv(file: web_sys::File) -> Result<Table, JsValue> {
     let mut data_as_strings: HashMap<String, Vec<String>> = HashMap::new();
     reader.records().for_each(|row_result| {
         let row = row_result.unwrap_throw();
-        
+
         row.iter().enumerate().for_each(|(idx, cell_str)| {
             let header = &headers[idx];
             let cell = cell_str.clone();
             if data_as_strings.contains_key(header) {
-                data_as_strings.get_mut(header).unwrap_throw().push(cell.to_string());
+                data_as_strings
+                    .get_mut(header)
+                    .unwrap_throw()
+                    .push(cell.to_string());
             } else {
                 data_as_strings.insert(header.to_string(), vec![cell.to_string()]);
             }
         });
     });
-    
+
     let mut data: HashMap<String, Column> = HashMap::new();
     data_as_strings.iter().for_each(|(header, data_vec)| {
         let column = Column::new(header.clone(), data_vec.clone()).unwrap_throw();

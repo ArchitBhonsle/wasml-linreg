@@ -1,6 +1,7 @@
 mod table;
-mod warray;
+mod watrix;
 mod utils;
+mod transform;
 
 use wasm_bindgen::prelude::*;
 
