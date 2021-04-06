@@ -3,6 +3,7 @@ mod watrix;
 mod utils;
 mod transform;
 
+extern crate nalgebra as na;
 use wasm_bindgen::prelude::*;
 
 #[cfg(feature = "wee_alloc")]

@@ -1,12 +1,13 @@
-use ndarray::{Array2, ArrayBase, s};
+use na::{DMatrix};
 use wasm_bindgen::prelude::*;
+use rand::Rng;
 
 use crate::table::table::*;
 
 #[wasm_bindgen]
 pub struct Watrix {
     #[wasm_bindgen(skip)]
-    pub data: Array2<f64>,
+    pub data: DMatrix<f64>,
 }
 
 #[wasm_bindgen]
@@ -15,9 +16,10 @@ impl Watrix {
     pub fn new_from_table(table: &Table) -> Watrix {
         let (height, width) = table.dims().unwrap();
         let array = 
-            Array2::from_shape_fn(
-                (height, width),
-                |(i, j)| table.index(i, j).unwrap());
+            DMatrix::from_fn(    
+                height,
+                width,
+                |i, j| table.index(i, j).unwrap());
 
         Watrix {
             data: array
@@ -25,18 +27,18 @@ impl Watrix {
     }
 
     #[wasm_bindgen(getter)]
-    pub fn height(&self) -> usize {
+    pub fn nrows(&self) -> usize {
         self.data.nrows()
     }
     
     #[wasm_bindgen(getter)]
-    pub fn width(&self) -> usize {
+    pub fn ncols(&self) -> usize {
         self.data.ncols()
     }
 
     #[wasm_bindgen(getter, js_name = data)]
     pub fn data(&self) -> js_sys::Array {
-        let (height, width) = (self.height() as u32, self.width() as u32);
+        let (height, width) = (self.nrows() as u32, self.ncols() as u32);
         let array = js_sys::Array::new_with_length(height);
 
         for i in 0..height {
@@ -50,23 +52,24 @@ impl Watrix {
         array
     }
     
-    // pub fn splice(&mut self, fraction: f64) -> Result<Watrix, JsValue> {
-    //     if fraction <= 1.0 {
-    //         return Err(JsValue::from_str("fraction has to be less than or equal to 1"));
-    //     }
-        
-    //     let (height, width) = (self.height(), self.width());
-        
-    //     let first_len = (height as f64 * fraction) as usize;
-    //     let (mut first_slice, mut second_slice) = self.data
-    //         .multi_slice_mut((s![..first_len,..], s![first_len.., ..]));
+    pub fn shuffle(&self) -> Watrix {
+        let mut shuffled_watrix = Watrix { data: self.data.clone() };
+        shuffled_watrix.shuffle_mut();
 
+        shuffled_watrix
+    }
 
-    //     let mut first = ArrayBase::from_shape((first_len, width), &mut first_slice).unwrap();
-    //     let mut second = ArrayBase::from_shape((height - first_len, width), &mut second_slice).unwrap();
-        
-    //     Ok(Watrix {
-    //         data: second
-    //     })
-    // }
+    pub fn shuffle_mut(&mut self) {
+        let mut rng = rand::thread_rng();
+        for i in 1..self.nrows() {
+            let j: usize = rng.gen_range(0..i);
+            self.data.swap_rows(i, j);
+        }
+    }
+
+    pub fn slice(&self, start: usize, end: usize) -> Watrix {
+        Watrix {
+            data: self.data.rows_range(start..end).clone_owned()
+        }
+    }
 }
