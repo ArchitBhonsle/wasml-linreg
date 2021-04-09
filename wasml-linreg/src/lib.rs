@@ -2,6 +2,7 @@ mod table;
 mod watrix;
 mod utils;
 mod transform;
+mod linear_regression;
 
 extern crate nalgebra as na;
 use wasm_bindgen::prelude::*;

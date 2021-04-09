@@ -1,4 +1,4 @@
-use na::{DMatrix};
+use na::DMatrix;
 use wasm_bindgen::prelude::*;
 use rand::Rng;
 
@@ -12,17 +12,17 @@ pub struct Watrix {
 
 #[wasm_bindgen]
 impl Watrix {
-    #[wasm_bindgen(constructor)]
+    #[wasm_bindgen(js_name = newFromTable)]
     pub fn new_from_table(table: &Table) -> Watrix {
         let (height, width) = table.dims().unwrap();
-        let array = 
+        let data = 
             DMatrix::from_fn(    
                 height,
                 width,
                 |i, j| table.index(i, j).unwrap());
 
         Watrix {
-            data: array
+            data
         }
     }
 
@@ -35,6 +35,16 @@ impl Watrix {
     pub fn ncols(&self) -> usize {
         self.data.ncols()
     }
+
+    #[wasm_bindgen(getter, js_name = dims)]
+    pub fn dims_to_js(&self) -> js_sys::Array {
+        let array = js_sys::Array::new_with_length(2);
+        array.set(0, JsValue::from(self.nrows() as u32));
+        array.set(1, JsValue::from(self.ncols() as u32));
+        
+        array
+    }   
+    
 
     #[wasm_bindgen(getter, js_name = data)]
     pub fn data(&self) -> js_sys::Array {
@@ -67,9 +77,22 @@ impl Watrix {
         }
     }
 
-    pub fn slice(&self, start: usize, end: usize) -> Watrix {
+    pub fn row_slice(&self, start: usize, end: usize) -> Watrix {
         Watrix {
             data: self.data.rows_range(start..end).clone_owned()
         }
     }
+
+    pub fn col_slice(&self, start: usize, end: usize) -> Watrix {
+        Watrix {
+            data: self.data.columns_range(start..end).clone_owned()
+        }
+    }
+    
 }
+
+// impl Watrix {
+//     pub fn log(&self, name: &str) {
+//         utils::log(&format!("{}: ({}, {})", name, self.nrows(), self.ncols()));
+//     }
+// }
